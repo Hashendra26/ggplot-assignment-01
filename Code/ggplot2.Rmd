@@ -88,9 +88,6 @@ Load/read in the data. (Delete this chunk if you do not need it, e.g. if you are
 # Load dataset
 data <- read_csv("../data/panel_regression_ready_or_pws_year_geocoded_acs.csv")
 
-# Quick check
-glimpse(data)
-
 
 ```
 
