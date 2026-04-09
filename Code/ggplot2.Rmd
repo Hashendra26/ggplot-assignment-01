@@ -1,0 +1,226 @@
+---
+title: "Showing off some ggplot2 skills"
+author:
+  name: Hashendra
+  affiliation: Oregon State University
+date: "10 April 2026"
+output:
+  html_document:
+    theme: flatly
+    highlight: haddock
+    toc: true
+    toc_depth: 4
+    toc_float: true
+    keep_md: true
+  pdf_document:
+    toc: true
+    toc_depth: '4'
+---
+
+```{r setup, include=FALSE}
+# These next lines set the default behavior for all R chunks in the .Rmd document.
+# I recommend you take a look here: https://rmarkdown.rstudio.com/authoring_rcodechunks.html
+# Before you begin, install the package `knitr` in your console! Run install.packages("knitr")
+knitr::opts_chunk$set(echo = TRUE)  # Show all R output
+knitr::opts_chunk$set(cache=TRUE)  # Cache the results to increase performance.
+```
+
+## Goal and requirements
+
+The goal of this assignment is simple: Produce *four* different figures using **ggplot2**. They do not have to identify causal relationships. Rather, the goal is to stretch your visualization legs and demonstrate any new (or existing) **ggplot2** skills that you have acquired since our first lecture. 
+
+Some additional points:
+
+- You are free to use any dataset that comes built in with base R, or bundled together with an external R package. See [here](https://vincentarelbundock.github.io/Rdatasets/datasets.html) for a large list.
+
+- That being said, I would especially encourage you to use your own data. 
+
+- We have not gotten to data importation yet, but take a look [here](https://support.rstudio.com/hc/en-us/articles/218611977-Importing-Data-with-RStudio) if you need help. I would recommend that you install the **readr** and/or **readxl** packages and use a command like `my_data <- read_csv("my_data.csv")` or `my_data <- read_excel("my_data.xlsx")`.
+
+- You can use the same dataset for all four of your plots. Or you can use a new dataset for each plot. Regardless of what you choose, I want you to try to use different geoms for each figure. There is a great list of geoms on the **ggplot2** cheatsheet [here](https://rstudio.github.io/cheatsheets/html/data-visualization.html) (check out the PDF!).
+
+- Any other **ggplot2** skills and add-ons like faceting, changing aesthetic scales or legends, using different themes (e.g. from the **ggthemes** package), animation, etc. are all welcome and encouraged.
+
+- I want to *see* the code that produces the figures. (Do not use `echo=FALSE` in any of the code chunks, if that means anything to you.)
+
+- To submit this assignment, create a repo on your GitHub account so that I can clone it. Organize your data into a `data/` folder and your code into a `scripts/` or `code/` folder. 
+
+### What you will be graded on
+
+- Are your figures clear? (E.g. lack of chart chunk, non-overlapping labels.)
+- Are your figures compelling? (E.g. use an appropriate geom for the insight that you want to convey.)
+- Variation. (Do not create four line charts of the same dataset. Be creative).
+- Did you read and follow the instructions of this assignment? (E.g. describe your data and figures, show the code that produced the figures, include data in the `/data` folder, etc.)
+- Etc.
+
+Lastly, do not forget to knit the assignment (click the "Knit" button, or press `Ctrl+Shift+K`) before submitting. 
+
+## Start the assignment
+
+Here is an R code chunk for you to load your packages. Feel free to load as many other packages and insert as many additional code chunks (`Ctr+Alt+I`) as you need. You can always load additional packages in the their own chunk blocks, but I recommend loading all of your packages together at the top.)
+
+```{r libs}
+if (!require("pacman")) install.packages("pacman")
+
+pacman::p_load(
+  tidyverse,
+  readr,
+  dplyr,
+  ggplot2,
+  here,
+  scales,
+  maps
+)
+# Note: The `p_load()` function from the pacman package is a convenient way to 
+# install (if necessary) and load packages all at once. You can think of this
+# as an alternative to the normal `library(ggplot2); library(here);...` way of
+# loading R packages.
+pacman::p_load(ggplot2,here)
+```
+
+### Figure 1: Total wildfire exposure over time
+
+Load/read in the data. (Delete this chunk if you do not need it, e.g. if you are using preloaded data from base R.)
+
+
+```{r data1}
+
+base_dir <- "D:/Second Year Paper/New Anlysis"
+
+panel_path <- file.path(
+  base_dir,
+  "cleaned_data/panel_regression_ready_or_pws_year_geocoded_acs.csv"
+)
+
+data <- read_csv(panel_path)
+#data <- read_csv("data/panel_regression_ready_or_pws_year_geocoded_acs.csv")
+
+
+
+```
+
+I have use the data set that i am using for my second year paper. This is a panel dataset of community water systems (CWS) in Oregon, constructed at the system-year level. The dataset combines information on drinking water quality violations with wildfire exposure and socioeconomic characteristics.
+
+The primary outcome variable is the annual count of Safe Drinking Water Act (SDWA) health-based violations (dv_hb_count) for each water system. The key explanatory variable is wildfire exposure, measured as the total burned area (burn_km2) within the watershed associated with each system in a given year. The dataset also includes demographic and economic variables, such as median household income (medincE), which allow for analysis of heterogeneity across communities.
+
+Because the data span multiple years and systems, this panel structure enables the analysis of both temporal trends and cross-sectional variation in wildfire exposure and water quality outcomes.
+
+```{r fig1}
+fire_year <- data %>%
+  group_by(year) %>%
+  summarise(total_burn = sum(burn_km2, na.rm = TRUE))
+
+ggplot(fire_year, aes(x = year, y = total_burn)) +
+  geom_line(color = "red", linewidth = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Total wildfire exposure over time 1984 - 2024",
+    x = "Year",
+    y = "Total burned area (km²)"
+  ) +
+  theme_minimal()
+```
+
+This figure shows the total wildfire exposure across all community water systems in each year, measured as the sum of burned area in square kilometers. A line graph is used because it clearly highlights changes over time.
+
+The figure shows substantial variation in wildfire exposure across years, with certain periods experiencing significantly higher burned area. These peaks likely correspond to major wildfire events in Oregon, particularly the Labor Day fires of 2020. This temporal variation is important, as it provides a key source of identifying variation for analyzing the relationship between wildfire exposure and drinking water quality outcomes.
+
+### Figure 2: Wildfire exposure and drinking water violations among exposed systems
+
+```{r fig2}
+plot_data <- data %>%
+  filter(burn_km2 > 0) %>%
+  filter(!is.na(burn_km2), !is.na(dv_hb_count))
+
+ggplot(plot_data, aes(x = burn_km2, y = dv_hb_count,)) +
+  geom_point(alpha = 0.3, color = "red" ) +
+  geom_smooth(method = "lm", se = T, color = "darkblue", linewidth = 1) +
+  labs(
+    title = "Wildfire exposure and violations (exposed systems only)",
+    x = "Burned area (km²)",
+    y = "Health-based violations"
+  ) +
+  theme_classic()
+
+```
+
+This figure examines the relationship between wildfire exposure and health-based drinking water violations, restricting the sample to community water systems that experienced wildfire exposure. I used a scatterplot is because it shows the relationship between two continuous variables. A fitted linear trend line is added to summarize the overall pattern in the data.By focusing only on exposed systems, this figure isolates variation in the intensity of wildfire exposure rather than differences between exposed and non-exposed systems. The plot suggests a positive relationship, where larger burned area is associated with a greater number of violations, although there is substantial dispersion in the observations.
+
+### Figure 3: Wildfire exposure and violations by income group
+
+```{r fig3}
+income_cutoff <- median(data$medincE, na.rm = TRUE)
+
+data_income <- data %>%
+  filter(burn_km2 > 0) %>%
+  mutate(
+    income_group = if_else(medincE < income_cutoff, "Low income", "High income")
+  ) %>%
+  filter(!is.na(burn_km2), !is.na(dv_hb_count), !is.na(income_group))
+
+ggplot(data_income, aes(x = burn_km2, y = dv_hb_count, color = income_group)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  labs(
+    title = "Wildfire exposure and violations by income group",
+    x = "Burned area (km²)",
+    y = "Health-based violations",
+    color = "Income group"
+  ) +
+  theme_minimal()
+```
+
+This figure explores whether the relationship between wildfire exposure and drinking water violations differs by income group. Water systems are classified as low income or high income using the sample median of median household income. The figure suggests possible heterogeneity in the relationship between wildfire exposure and violations across income groups. This is relevant because communities may differ in infrastructure quality, adaptive capacity, and exposure to environmental risks. As a result, wildfire exposure may have different implications for water quality outcomes across socioeconomic groups.
+
+
+### Figure 4: Spatial distribution of community water systems by income group in Oregon
+
+```{r fig4}
+# Create income group using the sample median
+income_cutoff <- median(data$medincE, na.rm = TRUE)
+
+# Collapse panel data to one row per CWS
+cws_map <- data %>%
+  filter(!is.na(latitude_final), !is.na(longitude_final)) %>%
+  group_by(PWSID, latitude_final, longitude_final) %>%
+  summarise(
+    medincE = first(medincE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    income_group = if_else(medincE < income_cutoff, "Low income", "High income")
+  )
+
+# Oregon boundary
+oregon_map <- map_data("state") %>%
+  filter(region == "oregon")
+
+# Plot map
+ggplot() +
+  geom_polygon(
+    data = oregon_map,
+    aes(x = long, y = lat, group = group),
+    fill = "gray95",
+    color = "gray50",
+    linewidth = 0.3
+  ) +
+  geom_point(
+    data = cws_map,
+    aes(x = longitude_final, y = latitude_final, color = income_group),
+    size = 2,
+    alpha = 0.7
+  ) +
+  scale_color_manual(
+    values = c("Low income" = "firebrick", "High income" = "steelblue")
+  ) +
+  coord_quickmap() +
+  labs(
+    title = "Location of community water systems by income group in Oregon",
+    x = "Longitude",
+    y = "Latitude",
+    color = "Income group"
+  ) +
+  theme_minimal()
+```
+
+This figure maps the locations of community water systems in Oregon using their latitude and longitude coordinates. Because the dataset is structured as a panel, the data are first collapsed to one observation per system so that each community water system appears only once on the map. Point color indicates whether the system is located in a low-income or high-income area, based on the sample median of median household income. The map provides a useful spatial summary of how community water systems are distributed across Oregon and whether low-income and high-income systems are concentrated in different parts of the state. This spatial perspective complements the previous figures by adding geographic variation to the analysis and helps illustrate how socioeconomic characteristics are distributed across the systems included in the dataset.
