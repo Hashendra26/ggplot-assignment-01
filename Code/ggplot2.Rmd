@@ -92,8 +92,8 @@ panel_path <- file.path(
   "cleaned_data/panel_regression_ready_or_pws_year_geocoded_acs.csv"
 )
 
-data <- read_csv(panel_path)
-#data <- read_csv("data/panel_regression_ready_or_pws_year_geocoded_acs.csv")
+#data <- read_csv(panel_path)
+data <- read_csv("data/panel_regression_ready_or_pws_year_geocoded_acs.csv")
 
 
 
